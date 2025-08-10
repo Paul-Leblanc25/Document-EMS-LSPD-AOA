@@ -323,51 +323,15 @@
             <p>Système de génération de documents pour LSPD et EMS</p>
         </div>
 
-        <!-- Section d'authentification -->
-        <div id="authSection" class="auth-section">
-            <div class="auth-tabs">
-                <button class="auth-tab active" data-dept="lspd">👮‍♂️ LSPD</button>
-                <button class="auth-tab" data-dept="ems">🚑 EMS</button>
-            </div>
-
-            <div id="lspdAuth" class="auth-form active">
-                <h3 style="margin-bottom: 25px; color: #1e40af;">Connexion LSPD</h3>
-                <div class="form-group">
-                    <label>Badge Number / Username</label>
-                    <input type="text" id="lspdUsername" placeholder="Ex: Badge #1234 ou john.smith">
-                </div>
-                <div class="form-group">
-                    <label>Mot de passe</label>
-                    <input type="password" id="lspdPassword" placeholder="Votre mot de passe">
-                </div>
-                <button class="btn btn-lspd" onclick="login('lspd')">Se connecter LSPD</button>
-            </div>
-
-            <div id="emsAuth" class="auth-form">
-                <h3 style="margin-bottom: 25px; color: #dc2626;">Connexion EMS</h3>
-                <div class="form-group">
-                    <label>ID Médecin / Username</label>
-                    <input type="text" id="emsUsername" placeholder="Ex: DR001 ou jane.doe">
-                </div>
-                <div class="form-group">
-                    <label>Mot de passe</label>
-                    <input type="password" id="emsPassword" placeholder="Votre mot de passe">
-                </div>
-                <button class="btn btn-ems" onclick="login('ems')">Se connecter EMS</button>
-            </div>
-
-            <div id="errorMessage" class="error-message" style="display: none;"></div>
-        </div>
-
         <!-- Contenu principal -->
-        <div id="mainContent" class="main-content">
-            <div id="userInfo" class="user-info">
-                <h3 id="welcomeMessage"></h3>
-                <p id="userDetails"></p>
-                <button class="logout-btn" onclick="logout()">Déconnexion</button>
+        <div id="mainContent" class="main-content" style="display: block;">
+            <div class="auth-section" style="margin-bottom: 30px;">
+                <h3 style="text-align: center; margin-bottom: 30px; color: #333;">Sélectionnez le type de document</h3>
+                <div class="auth-tabs">
+                    <button class="auth-tab lspd active" data-dept="lspd" onclick="switchDepartment('lspd')">👮‍♂️ Documents LSPD</button>
+                    <button class="auth-tab ems" data-dept="ems" onclick="switchDepartment('ems')">🚑 Documents EMS</button>
+                </div>
             </div>
-
-            <h2 style="margin-bottom: 30px;">Sélectionnez le type de document</h2>
             
             <div id="documentTypes" class="document-types">
                 <!-- Les types de documents seront générés dynamiquement -->
@@ -394,21 +358,36 @@
     </div>
 
     <script>
-        // Données d'authentification (en production, utiliser une vraie base de données)
-        const credentials = {
-            lspd: {
-                'badge1234': 'lspd123',
-                'john.smith': 'police456',
-                'sarah.connor': 'lspd789'
-            },
-            ems: {
-                'dr001': 'ems123',
-                'jane.doe': 'medical456',
-                'mike.johnson': 'ems789'
-            }
-        };
+        // Variables globales
+        let currentDepartment = 'lspd'; // Département par défaut
+        let selectedDocType = null;
 
-        // Types de documents par département
+        // Initialisation au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDocumentTypes();
+        });
+
+        // Changement de département
+        function switchDepartment(department) {
+            currentDepartment = department;
+            
+            // Mise à jour des onglets
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-dept="${department}"]`).classList.add('active');
+            
+            // Rechargement des types de documents
+            loadDocumentTypes();
+            
+            // Reset de la sélection
+            selectedDocType = null;
+            document.getElementById('documentPreview').style.display = 'none';
+            
+            // Reset des formulaires
+            document.querySelectorAll('input, textarea, select').forEach(input => input.value = '');
+            document.querySelectorAll('.form-section').forEach(section => section.remove());
+        }
         const documentTypes = {
             lspd: [
                 {
@@ -466,81 +445,17 @@
             ]
         };
 
-        let currentUser = null;
-        let currentDepartment = null;
-        let selectedDocType = null;
-
-        // Gestion des onglets d'authentification
-        document.querySelectorAll('.auth-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-                
-                this.classList.add('active');
-                document.getElementById(this.dataset.dept + 'Auth').classList.add('active');
-            });
-        });
-
-        function login(department) {
-            const username = document.getElementById(department + 'Username').value;
-            const password = document.getElementById(department + 'Password').value;
-            
-            if (!username || !password) {
-                showError('Veuillez remplir tous les champs');
-                return;
-            }
-
-            if (credentials[department][username] === password) {
-                currentUser = username;
-                currentDepartment = department;
-                
-                document.getElementById('authSection').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                
-                updateUserInfo();
-                loadDocumentTypes();
-                hideError();
-            } else {
-                showError('Identifiants incorrects');
-            }
-        }
-
-        function logout() {
-            currentUser = null;
-            currentDepartment = null;
-            selectedDocType = null;
-            
-            document.getElementById('authSection').style.display = 'block';
-            document.getElementById('mainContent').style.display = 'none';
-            document.getElementById('documentPreview').style.display = 'none';
-            
-            // Reset forms
-            document.querySelectorAll('input, textarea, select').forEach(input => input.value = '');
-        }
-
-        function updateUserInfo() {
-            const deptName = currentDepartment === 'lspd' ? 'LSPD' : 'EMS';
-            const deptIcon = currentDepartment === 'lspd' ? '👮‍♂️' : '🚑';
-            
-            document.getElementById('welcomeMessage').textContent = `${deptIcon} Bienvenue, ${currentUser}`;
-            document.getElementById('userDetails').textContent = `Connecté en tant que ${deptName} • ${new Date().toLocaleDateString('fr-FR')}`;
-            
-            const userInfo = document.getElementById('userInfo');
-            if (currentDepartment === 'lspd') {
-                userInfo.style.background = 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)';
-            } else {
-                userInfo.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
-            }
-        }
+        // Types de documents par département
 
         function loadDocumentTypes() {
             const container = document.getElementById('documentTypes');
             const types = documentTypes[currentDepartment];
+            
             container.innerHTML = '';
             types.forEach(type => {
                 const card = document.createElement('div');
                 card.className = 'document-card';
-                card.onclick = (e) => selectDocumentType(type.id, card);
+                card.onclick = () => selectDocumentType(type.id);
                 card.innerHTML = `
                     <h3>${type.title}</h3>
                     <p>${type.description}</p>
@@ -549,22 +464,30 @@
             });
         }
 
-        function selectDocumentType(typeId, cardElement) {
+        function selectDocumentType(typeId) {
             selectedDocType = typeId;
+            
             // Mise à jour de l'UI
             document.querySelectorAll('.document-card').forEach(card => {
                 card.classList.remove('selected');
             });
-            cardElement.classList.add('selected');
+            event.target.closest('.document-card').classList.add('selected');
+            
             // Affichage du formulaire
             loadDocumentForm(typeId);
         }
 
         function loadDocumentForm(typeId) {
             const formsContainer = document.getElementById('documentForms');
-            // Supprimer les anciens formulaires
-            formsContainer.innerHTML = '';
+            
+            // Cacher tous les formulaires existants
+            formsContainer.querySelectorAll('.form-section').forEach(form => {
+                form.classList.remove('active');
+            });
+            
             let formHTML = '';
+            const docNumber = generateDocumentNumber();
+            
             switch(typeId) {
                 case 'incident_report':
                     formHTML = createIncidentReportForm();
@@ -597,10 +520,12 @@
                     formHTML = createAmbulanceReportForm();
                     break;
             }
+            
             const formSection = document.createElement('div');
             formSection.className = 'form-section active';
             formSection.id = `form-${typeId}`;
             formSection.innerHTML = formHTML;
+            
             formsContainer.appendChild(formSection);
         }
 
@@ -774,408 +699,4 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Suspect principal</label>
-                        <input type="text" id="warrant_suspect" placeholder="Nom du suspect" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Motif du mandat</label>
-                        <textarea id="warrant_motive" rows="3" placeholder="Raison de la perquisition" required></textarea>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Jugement</label>
-                        <input type="text" id="warrant_jugement" placeholder="Numéro du jugement" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Autorité émettrice</label>
-                        <input type="text" id="warrant_authority" placeholder="Ex: Tribunal de Los Santos" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Date d'émission</label>
-                    <input type="date" id="warrant_date" required>
-                </div>
-                <button type="button" class="btn btn-lspd" onclick="previewDocument()">Aperçu du document</button>
-            `;
-        }
-
-        function createInvestigationReportForm() {
-            return `
-                <h3>🕵️ Rapport d'enquête</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>ID de l'enquête</label>
-                        <input type="text" id="investigation_id" placeholder="Ex: INV-2023-001" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Statut de l'enquête</label>
-                        <select id="investigation_status" required>
-                            <option value="">Sélectionner...</option>
-                            <option value="Ouverte">Ouverte</option>
-                            <option value="Fermée">Fermée</option>
-                            <option value="En cours">En cours</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Priorité</label>
-                        <select id="investigation_priority" required>
-                            <option value="Basse">Basse</option>
-                            <option value="Normale">Normale</option>
-                            <option value="Haute">Haute</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Type d'incident lié</label>
-                        <select id="investigation_incident_type" required>
-                            <option value="">Sélectionner...</option>
-                            <option value="Vol">Vol</option>
-                            <option value="Agression">Agression</option>
-                            <option value="Accident de la route">Accident de la route</option>
-                            <option value="Autre">Autre</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Description de l'enquête</label>
-                    <textarea id="investigation_description" rows="4" placeholder="Décrivez l'enquête..." required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Actions recommandées</label>
-                    <textarea id="investigation_actions" rows="3" placeholder="Actions à entreprendre..." required></textarea>
-                </div>
-                <button type="button" class="btn btn-lspd" onclick="previewDocument()">Aperçu du document</button>
-            `;
-        }
-
-        function createMedicalReportForm() {
-            return `
-                <h3>🚑 Rapport médical</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>ID du patient</label>
-                        <input type="text" id="medical_patient_id" placeholder="Ex: PAT-2023-001" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Date de l'intervention</label>
-                        <input type="datetime-local" id="medical_date" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Type d'intervention</label>
-                    <select id="medical_procedure" required>
-                        <option value="">Sélectionner...</option>
-                        <option value="Consultation">Consultation</option>
-                        <option value="Urgence">Urgence</option>
-                        <option value="Hospitalisation">Hospitalisation</option>
-                        <option value="Autre">Autre</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Diagnostic</label>
-                    <textarea id="medical_diagnosis" rows="3" placeholder="Diagnostic du médecin" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Traitement prescrit</label>
-                    <textarea id="medical_treatment" rows="3" placeholder="Médicaments et traitements prescrits" required></textarea>
-                </div>
-                <button type="button" class="btn btn-ems" onclick="previewDocument()">Aperçu du document</button>
-            `;
-        }
-
-        function createDeathCertificateForm() {
-            return `
-                <h3>⚰️ Certificat de décès</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>ID du défunt</label>
-                        <input type="text" id="death_patient_id" placeholder="Ex: PAT-2023-001" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Date du décès</label>
-                        <input type="date" id="death_date" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Cause du décès</label>
-                    <textarea id="death_cause" rows="3" placeholder="Cause du décès" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Lieu du décès</label>
-                    <input type="text" id="death_location" placeholder="Ex: Hôpital de Los Santos" required>
-                </div>
-                <button type="button" class="btn btn-ems" onclick="previewDocument()">Aperçu du document</button>
-            `;
-        }
-
-        function createPsychiatricEvalForm() {
-            return `
-                <h3>🧠 Évaluation psychiatrique</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>ID du patient</label>
-                        <input type="text" id="psychiatric_patient_id" placeholder="Ex: PAT-2023-001" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Date de l'évaluation</label>
-                        <input type="datetime-local" id="psychiatric_date" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Motif de l'évaluation</label>
-                    <textarea id="psychiatric_motive" rows="3" placeholder="Raison de l'évaluation" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Antécédents médicaux</label>
-                    <textarea id="psychiatric_history" rows="3" placeholder="Antécédents médicaux du patient"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Observations</label>
-                    <textarea id="psychiatric_observations" rows="3" placeholder="Observations de l'évaluateur" required></textarea>
-                </div>
-                <button type="button" class="btn btn-ems" onclick="previewDocument()">Aperçu du document</button>
-            `;
-        }
-
-        function createPrescriptionForm() {
-            return `
-                <h3>💊 Ordonnance médicale</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>ID du patient</label>
-                        <input type="text" id="prescription_patient_id" placeholder="Ex: PAT-2023-001" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Date de l'ordonnance</label>
-                        <input type="datetime-local" id="prescription_date" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Médicaments prescrits</label>
-                    <textarea id="prescription_medicines" rows="3" placeholder="Liste des médicaments" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Posologie</label>
-                    <textarea id="prescription_dosage" rows="3" placeholder="Dosage et fréquence" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Durée du traitement</label>
-                    <input type="text" id="prescription_duration" placeholder="Ex: 10 jours" required>
-                </div>
-                <button type="button" class="btn btn-ems" onclick="previewDocument()">Aperçu du document</button>
-            `;
-        }
-
-        function createAmbulanceReportForm() {
-            return `
-                <h3>🚑 Rapport d'ambulance</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>ID du patient</label>
-                        <input type="text" id="ambulance_patient_id" placeholder="Ex: PAT-2023-001" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Date du transport</label>
-                        <input type="datetime-local" id="ambulance_date" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Motif du transport</label>
-                    <textarea id="ambulance_motive" rows="3" placeholder="Raison du transport" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>État du patient</label>
-                    <select id="ambulance_patient_condition" required>
-                        <option value="">Sélectionner...</option>
-                        <option value="Stable">Stable</option>
-                        <option value="Critique">Critique</option>
-                        <option value="Décédé">Décédé</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Observations</label>
-                    <textarea id="ambulance_observations" rows="3" placeholder="Observations du personnel médical" required></textarea>
-                </div>
-                <button type="button" class="btn btn-ems" onclick="previewDocument()">Aperçu du document</button>
-            `;
-        }
-
-        function previewDocument() {
-            const docTitle = document.getElementById('docTitle');
-            const docSubtitle = document.getElementById('docSubtitle');
-            const docContent = document.getElementById('docContent');
-            
-            // Réinitialiser le contenu du document
-            docTitle.innerHTML = '';
-            docSubtitle.innerHTML = '';
-            docContent.innerHTML = '';
-            
-            switch(selectedDocType) {
-                case 'incident_report':
-                    docTitle.innerHTML = 'Rapport d\'incident';
-                    docSubtitle.innerHTML = 'Incident Report';
-                    docContent.innerHTML = `
-                        <strong>Date de l'incident:</strong> ${document.getElementById('incident_date').value}<br>
-                        <strong>Lieu de l'incident:</strong> ${document.getElementById('incident_location').value}<br>
-                        <strong>Type d'incident:</strong> ${document.getElementById('incident_type').value}<br>
-                        <strong>Gravité:</strong> ${document.getElementById('incident_severity').value}<br>
-                        <strong>Personnes impliquées:</strong> ${document.getElementById('incident_people').value}<br>
-                        <strong>Description détaillée:</strong> ${document.getElementById('incident_description').value}<br>
-                        <strong>Actions entreprises:</strong> ${document.getElementById('incident_actions').value}
-                    `;
-                    break;
-                case 'arrest_report':
-                    docTitle.innerHTML = 'Procès-verbal d\'arrestation';
-                    docSubtitle.innerHTML = 'Arrest Report';
-                    docContent.innerHTML = `
-                        <strong>Nom du suspect:</strong> ${document.getElementById('arrest_suspect_name').value}<br>
-                        <strong>Âge:</strong> ${document.getElementById('arrest_suspect_age').value}<br>
-                        <strong>Date d'arrestation:</strong> ${document.getElementById('arrest_date').value}<br>
-                        <strong>Lieu d'arrestation:</strong> ${document.getElementById('arrest_location').value}<br>
-                        <strong>Charges retenues:</strong> ${document.getElementById('arrest_charges').value}<br>
-                        <strong>Circonstances de l'arrestation:</strong> ${document.getElementById('arrest_circumstances').value}<br>
-                        <strong>Droits Miranda lus:</strong> ${document.getElementById('arrest_miranda').value}<br>
-                        <strong>Résistance à l'arrestation:</strong> ${document.getElementById('arrest_resistance').value}
-                    `;
-                    break;
-                case 'traffic_citation':
-                    docTitle.innerHTML = 'Contravention routière';
-                    docSubtitle.innerHTML = 'Traffic Citation';
-                    docContent.innerHTML = `
-                        <strong>Nom du conducteur:</strong> ${document.getElementById('traffic_driver_name').value}<br>
-                        <strong>Numéro de permis:</strong> ${document.getElementById('traffic_license').value}<br>
-                        <strong>Plaque d'immatriculation:</strong> ${document.getElementById('traffic_plate').value}<br>
-                        <strong>Modèle du véhicule:</strong> ${document.getElementById('traffic_vehicle').value}<br>
-                        <strong>Type d'infraction:</strong> ${document.getElementById('traffic_violation').value}<br>
-                        <strong>Date de l'infraction:</strong> ${document.getElementById('traffic_date').value}<br>
-                        <strong>Lieu:</strong> ${document.getElementById('traffic_location').value}<br>
-                        <strong>Montant de l'amende:</strong> $${document.getElementById('traffic_fine').value}<br>
-                        <strong>Détails supplémentaires:</strong> ${document.getElementById('traffic_details').value}
-                    `;
-                    break;
-                case 'search_warrant':
-                    docTitle.innerHTML = 'Mandat de perquisition';
-                    docSubtitle.innerHTML = 'Search Warrant';
-                    docContent.innerHTML = `
-                        <strong>Adresse à perquisitionner:</strong> ${document.getElementById('warrant_address').value}<br>
-                        <strong>Suspect principal:</strong> ${document.getElementById('warrant_suspect').value}<br>
-                        <strong>Motif du mandat:</strong> ${document.getElementById('warrant_motive').value}<br>
-                        <strong>Jugement:</strong> ${document.getElementById('warrant_jugement').value}<br>
-                        <strong>Autorité émettrice:</strong> ${document.getElementById('warrant_authority').value}<br>
-                        <strong>Date d'émission:</strong> ${document.getElementById('warrant_date').value}
-                    `;
-                    break;
-                case 'investigation_report':
-                    docTitle.innerHTML = 'Rapport d\'enquête';
-                    docSubtitle.innerHTML = 'Investigation Report';
-                    docContent.innerHTML = `
-                        <strong>ID de l'enquête:</strong> ${document.getElementById('investigation_id').value}<br>
-                        <strong>Statut de l'enquête:</strong> ${document.getElementById('investigation_status').value}<br>
-                        <strong>Priorité:</strong> ${document.getElementById('investigation_priority').value}<br>
-                        <strong>Type d'incident lié:</strong> ${document.getElementById('investigation_incident_type').value}<br>
-                        <strong>Description de l'enquête:</strong> ${document.getElementById('investigation_description').value}<br>
-                        <strong>Actions recommandées:</strong> ${document.getElementById('investigation_actions').value}
-                    `;
-                    break;
-                case 'medical_report':
-                    docTitle.innerHTML = 'Rapport médical';
-                    docSubtitle.innerHTML = 'Medical Report';
-                    docContent.innerHTML = `
-                        <strong>ID du patient:</strong> ${document.getElementById('medical_patient_id').value}<br>
-                        <strong>Date de l'intervention:</strong> ${document.getElementById('medical_date').value}<br>
-                        <strong>Type d'intervention:</strong> ${document.getElementById('medical_procedure').value}<br>
-                        <strong>Diagnostic:</strong> ${document.getElementById('medical_diagnosis').value}<br>
-                        <strong>Traitement prescrit:</strong> ${document.getElementById('medical_treatment').value}
-                    `;
-                    break;
-                case 'death_certificate':
-                    docTitle.innerHTML = 'Certificat de décès';
-                    docSubtitle.innerHTML = 'Death Certificate';
-                    docContent.innerHTML = `
-                        <strong>ID du défunt:</strong> ${document.getElementById('death_patient_id').value}<br>
-                        <strong>Date du décès:</strong> ${document.getElementById('death_date').value}<br>
-                        <strong>Cause du décès:</strong> ${document.getElementById('death_cause').value}<br>
-                        <strong>Lieu du décès:</strong> ${document.getElementById('death_location').value}
-                    `;
-                    break;
-                case 'psychiatric_eval':
-                    docTitle.innerHTML = 'Évaluation psychiatrique';
-                    docSubtitle.innerHTML = 'Psychiatric Evaluation';
-                    docContent.innerHTML = `
-                        <strong>ID du patient:</strong> ${document.getElementById('psychiatric_patient_id').value}<br>
-                        <strong>Date de l'évaluation:</strong> ${document.getElementById('psychiatric_date').value}<br>
-                        <strong>Motif de l'évaluation:</strong> ${document.getElementById('psychiatric_motive').value}<br>
-                        <strong>Antécédents médicaux:</strong> ${document.getElementById('psychiatric_history').value}<br>
-                        <strong>Observations:</strong> ${document.getElementById('psychiatric_observations').value}
-                    `;
-                    break;
-                case 'prescription':
-                    docTitle.innerHTML = 'Ordonnance médicale';
-                    docSubtitle.innerHTML = 'Medical Prescription';
-                    docContent.innerHTML = `
-                        <strong>ID du patient:</strong> ${document.getElementById('prescription_patient_id').value}<br>
-                        <strong>Date de l'ordonnance:</strong> ${document.getElementById('prescription_date').value}<br>
-                        <strong>Médicaments prescrits:</strong> ${document.getElementById('prescription_medicines').value}<br>
-                        <strong>Posologie:</strong> ${document.getElementById('prescription_dosage').value}<br>
-                        <strong>Durée du traitement:</strong> ${document.getElementById('prescription_duration').value}
-                    `;
-                    break;
-                case 'ambulance_report':
-                    docTitle.innerHTML = 'Rapport d'ambulance';
-                    docSubtitle.innerHTML = 'Ambulance Report';
-                    docContent.innerHTML = `
-                        <strong>ID du patient:</strong> ${document.getElementById('ambulance_patient_id').value}<br>
-                        <strong>Date du transport:</strong> ${document.getElementById('ambulance_date').value}<br>
-                        <strong>Motif du transport:</strong> ${document.getElementById('ambulance_motive').value}<br>
-                        <strong>État du patient:</strong> ${document.getElementById('ambulance_patient_condition').value}<br>
-                        <strong>Observations:</strong> ${document.getElementById('ambulance_observations').value}
-                    `;
-                    break;
-            }
-            
-            document.getElementById('documentPreview').style.display = 'block';
-        }
-
-        function generatePDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Récupérer le contenu du document
-            const docTitle = document.getElementById('docTitle').innerHTML;
-            const docSubtitle = document.getElementById('docSubtitle').innerHTML;
-            const docContent = document.getElementById('docContent').innerHTML;
-            
-            // Ajouter le titre
-            doc.setFontSize(22);
-            doc.text(docTitle, 10, 10);
-            
-            // Ajouter le sous-titre
-            doc.setFontSize(16);
-            doc.text(docSubtitle, 10, 20);
-            
-            // Ajouter le contenu
-            doc.setFontSize(12);
-            doc.html(docContent, {
-                callback: function(doc) {
-                    doc.save('document.pdf');
-                },
-                x: 10,
-                y: 30
-            });
-        }
-
-        function showError(message) {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.innerHTML = message;
-            errorMessage.style.display = 'block';
-        }
-
-        function hideError() {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.style.display = 'none';
-        }
-    </script>
-</body>
-</html>
+                        <label>Suspect principal
